@@ -1,0 +1,40 @@
+// main will be always my entry point in huff
+// we dont have functions we have macros
+// we do always `#define macro <name_of_the_macro> = takes() returns() {}`
+// we compile with `huffc <file_path>` with no outputs it means it compiles
+// or `huffc <file_path> -b` and we get as output the bytecode
+// or `huffc <file_path> --bin-runtime` and we get as output the runtime code
+// And use it in https://www.evm.codes/playground and see the opcodes we have here
+
+#define macro MAIN() = takes(0) returns(0) {
+    // We can write PUSH 0 0x00 or 0x00
+    0x00                   // [0]
+    calldataload           // [calldataload 32 bytes]   
+    // How do we cutdown the calldata -> func selector
+    // Use the opcode shift right to do that. Have to count all the 0 in the 
+    // calldata this is the function selector. 56 ceros / 2 = 28 bytes, or 224 bits
+    // Write in the terminal `cast to-base 224 hex` the output is 0xe0
+    0xe0                   // or PUSH1 0xe0. My stack is now [0xe0, calldata (32bytes)]
+    shr                    // shift to the right, the times from the latest on stack. My stack is now [func_selector]
+    // Now that we hace the function selector on stack we can do some function dispatching
+
+    // Jump -> function data associated with the selector
+    // if function_selector is updateHorseNumber jump to that function
+    // if function_selector is readNumberOfHorses jump to that function
+    // To get the signatures write in terminal `cast sig "updateHorseNumber(uint256)"`, `cast sig "readNumberOfHorses()"`
+    // 0xcdfead2e => updateHorseNumber()
+    // 0xe026c017 => readNumberOfHorses()
+
+    // We can push the selector on stack and compare with opcode eq
+    0xcdfead2e               // [0xcdfead2e, func_selector]
+    eq                       // [true if matches == 1, false if not == 0]
+    // jump to the updateHorseNumber function if true
+    updateJump               // [updateHorseNumberProgramCounter, true/false conditional]
+    // Now use the opcode JUMPI to jump to the updateHorseNumber function. If the condition is true jump to the updateHorseNumber function
+    jumpi                   // [] this deletes the stack
+
+    updateJump:
+        SET_NUMBER_OF_HORSES()
+}
+
+#define macro SET_NUMBER_OF_HORSES() = takes(0) returns(0) {}
